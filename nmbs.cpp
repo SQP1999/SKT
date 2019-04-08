@@ -1,144 +1,110 @@
-#include<stdio.h>
-#include<windows.h>
-#include<conio.h>
-//定义全局变量 
-int high,width;						//定义边界 
-int position_x,position_y;			//飞机位置 
-int bullet_x,bullet_y;				//子弹位置 
-int enemy_x,enemy_y;
-int score;
-int flag;							//飞机状态 
-void gotoxy(int x,int y)  			//光标移动到(x,y)位置
-{
-    HANDLE handle = GetStdHandle(STD_OUTPUT_HANDLE);
-    COORD pos;
-    pos.X = x;
-    pos.Y = y;
-    SetConsoleCursorPosition(handle,pos);
-}
-void HideCursor() // 用于隐藏光标
-{
-	CONSOLE_CURSOR_INFO cursor_info = {1, 0};  // 第二个值为0表示隐藏光标
-	SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &cursor_info);
-}
- 
- 
-void startup()						//数据初始化 
-{
-	high=18;
-	width=26;
-	
-	position_x=high-3;				
-	position_y=width/2;
-	
-	bullet_x=0;
-	bullet_y=position_y; 
-	
-	enemy_x=0;
-	enemy_y=position_y;
-	
-	score=0;
-	
-	flag=0;							//飞机完好 
-	
-	HideCursor();
-}
-void show()							//显示界面 
-{
-	int i,j;
-	for(i=0;i<high;i++)
-	{
-		for(j=0;j<width;j++)
-		{
-			if(flag)
-				break;
-			 
-			else if((i==position_x)&&(j==position_y))		//飞机坐标 
-				printf("*");
-			else if((i==enemy_x)&&(j==enemy_y))				//敌机坐标 
-				printf("*");
-			else if((i==bullet_x)&&(j==bullet_y))			//子弹坐标 
-					printf("|");
-			else if ((j==width-1)||(i==high-1)||(j==0)||(i==0))				//打印边界 
-				printf("#");
-			else
-				printf(" ");
-		}
-		printf("\n"); 
-	}
-	printf("\n");
-	if((position_x==enemy_x)&&(position_y==enemy_y))
-	{
-		flag=1;							//飞机撞毁 游戏结束 
-		printf("得分: %d\n",score);
-		printf("游戏结束");
-	}
-	else
-		printf("得分: %d\n",score);
-}
-void withoutInpute()						//与用户输入无关
-{
-	if(bullet_x>0)							//子弹上升效果 
-		bullet_x--;
-	if((bullet_x==enemy_x)&&(bullet_y==enemy_y))		//子弹命中敌机 
-	{
-		score++;
-		bullet_x=-1;	
-		enemy_x=1;
-		enemy_y=2+rand()%width-2;
-	}	
- 
- 
-	static int speed;
-	if(speed<30)					//减慢敌机速度，不影响飞机和子弹速度 
-		speed++;
-	if(speed==30)
-	{
-		if(enemy_x<high)
-			enemy_x++;
-		else 
-		{
-			enemy_x=0;
-			enemy_y=2+rand()%width-2;
-		}
-		speed=0;
-	}
- 
- 
- 
- 
-}
-void withInpute()						//与用户输入有关 
-{
-	char input;
-	if(kbhit())										//控制飞机方向 
-	{
-		input=getch();
-		if((input=='w')&&position_x>1)
-			position_x--;	
-		if((input=='s')&&position_x<high-2)
-			position_x++;		
-		if((input=='a')&&position_y>1)
-			position_y--;	
-		if((input=='d')&&position_y<width-2)
-			position_y++;
-		if(input==' ')
-		{
-			bullet_x=position_x-1;
-			bullet_y=position_y;
-		}
-	}
-}
+#include <stdio.h>
+#include <stdlib.h>
+#include <conio.h>
+#include <windows.h>
+#define N 35
+#pragma warning(disable: 4996)
+int str[22][N] = { 0 }, plane = 9, width = 24, speed = 3, density = 30, score = 0, death = 0,time=0,enemybullet=0;
+//全局变量：界面、我机初始位、界面宽度、敌机速度、敌机密度、得分、死亡
+void show(int a[][N]);//打印函数
+void movebul(int[][N]);//子弹移动函数
+void moveplane(int[][N]);//敌机移动函数
+void moveenemybul(int[][N]);
 int main()
 {
-	system("color 2f");
-	startup();					// 数据初始化
-	while(1)					//  游戏循环执行
+    int i = 0, j = 0;
+    str[21][plane] = 1;
+    str[0][5] = 3;
+    while (1)
+    {
+        if (kbhit())
+            switch (getch())//控制左右移动和子弹
+        {
+            case 'a':
+            case 'A':
+                if (plane>0)str[21][plane] = 0, str[21][--plane] = 1;
+                break;
+            case 'd':
+            case 'D':
+                if (plane<width - 2)str[21][plane] = 0, str[21][++plane] = 1;
+                break;
+            case 'w':
+            case 'W':
+                str[20][plane] = 2; break;
+                break;
+        }
+        if (++j%density == 0)//控制生产敌机的速度
+        {
+            j = 0; srand(time);
+            str[0][rand() % width] = 3;
+        }
+        if (++i%speed == 0)//控制敌机移动速度，相对于子弹移动速度
+            moveplane(str);
+        movebul(str);
+        show(str);
+        if (i == 30000)i = 0;//以免i 越界
+    }
+    system("pause");
+    return 0;
+}
+void show(int a[][N])
+{
+    system("cls");
+    int i, j;
+    for (i = 0; i<22; i++)
+    {
+        a[i][width - 1] = 4;
+        for (j = 0; j<width; j++)
+        {
+            if (a[i][j] == 0)printf(" ");
+            if (a[i][j] == 1)printf("\5");//输出我机的符号
+            if (a[i][j] == 2)printf(".");//子弹
+            if (a[i][j] == 3)printf("\4"); //输出敌机符号
+            if (a[i][j] == 4)printf("|");
+            if (i == 0 && j == width - 1)printf("得分：%d", score);//右上角显示得分
+            if (i == 1 && j == width - 1)printf("死亡：%d", death);
+        }
+        printf("\n");//Sleep(100);      
+    }
+    Sleep(80);
+}
+void movebul(int a[][N])//子弹移动函数
+{
+    int i, j;
+    for (i = 0; i<22; i++)
+    for (j = 0; j<width; j++)
+    {
+        if (i == 0 && a[i][j] == 2)
+            a[i][j] = 0;
+        if (a[i][j] == 2)
+        {
+            if (a[i - 1][j] == 3)
+                score += 10;//,printf("\7")
+            a[i][j] = 0, a[i - 1][j] = 2;
+        }
+    }
+}
+void moveplane(int a[][N])//敌机移动函数
+{
+    int i, j;
+    for (i = 21; i >= 0; i--)//从最后一行往上是为了避免把敌机直接冲出数组。
+    for (j = 0; j<width; j++)
+    {
+        if (i == 21 && a[i][j] == 3)a[i][j] = 0;//底行赋值0 以免越界。
+        if (a[i][j] == 3)a[i][j] = 0, a[i + 1][j] = 3;
+    }
+    if (a[20][plane] == 3 && a[21][plane] == 1)//敌机和我机相碰
+        death++;
+}
+void moveenemybul(int a[][N])//敌机子弹函数
+{
+int i,j;
+for (i = 21; i >= 0; i++)
+    for (j = 0; j<width; j--)
 	{
-		gotoxy(0,0);
-		show();					// 显示画面
-		withoutInpute();		// 与用户输入无关的更新
-		withInpute();			// 与用户输入有关的更新
+if (i == 21 && a[i][j] == 3)a[i][j] = 0;
+        if (a[i][j] == 3)a[i][j] = 0, a[i + 1][j] = 3;
 	}
- }  
-
+if (a[20][plane] == 3 && a[21][plane] == 1)
+        death++;
+}
